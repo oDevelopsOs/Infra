@@ -1,0 +1,40 @@
+# Terminación TLS (Let's Encrypt). Podman: podman compose ...
+# Requisitos: red investplatform_internal (backend) y red investplatform_search (searxng/).
+#
+#   cd searxng && podman compose -f podman-compose.yml --env-file .env.searxng up -d
+#   cd ../../backend && podman compose up -d --build
+#   cd ../hetzner && podman compose -f docker-compose.caddy.yml --env-file .env.caddy up -d
+#
+version: "3.9"
+
+networks:
+  investplatform_internal:
+    external: true
+    name: investplatform_internal
+  investplatform_search:
+    external: true
+    name: investplatform_search
+
+services:
+  caddy:
+    image: docker.io/caddy:2-alpine
+    container_name: body-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN}
+      SEARCH_DOMAIN: ${SEARCH_DOMAIN:?set SEARCH_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - investplatform_internal
+      - investplatform_search
+
+volumes:
+  caddy_data:
+  caddy_config:

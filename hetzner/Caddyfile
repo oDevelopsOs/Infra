@@ -1,0 +1,18 @@
+# Dominios públicos (TLS automático). Variables de entorno vía docker-compose.caddy.yml
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode gzip zstd
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	reverse_proxy app:8080
+}
+
+{$SEARCH_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy searxng-edge:80
+}

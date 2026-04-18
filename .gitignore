@@ -1,0 +1,8 @@
+# Secretos locales (plantillas = *.example)
+searxng/.env.searxng
+hetzner/.env.caddy
+search-router/search-router.env
+
+# OS
+.DS_Store
+Thumbs.db

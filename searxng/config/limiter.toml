@@ -1,0 +1,25 @@
+# SearXNG botdetection / limiter (requires SEARXNG_LIMITER=true + SEARXNG_VALKEY_URL).
+# Mount: /etc/searxng/limiter.toml
+#
+# When SearXNG sits behind Nginx/Caddy/ALB, the reverse proxy IP must be in trusted_proxies
+# so client IPs from X-Forwarded-For / X-Real-IP are honored (see nginx-edge.conf).
+
+[botdetection]
+ipv4_prefix = 32
+ipv6_prefix = 48
+
+trusted_proxies = [
+  '127.0.0.0/8',
+  '::1',
+  '10.0.0.0/8',
+  '172.16.0.0/12',
+  '192.168.0.0/16',
+  'fc00::/7',
+]
+
+[botdetection.ip_limit]
+filter_link_local = false
+link_token = false
+
+[botdetection.ip_lists]
+pass_searxng_org = true

@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  search-router:
+    build:
+      # Monorepo: ../../backend = proyecto/backend. Repo Infra solo: export SEARCH_ROUTER_BACKEND_DIR o symlink.
+      context: ${SEARCH_ROUTER_BACKEND_DIR:-../../backend}
+      dockerfile: Dockerfile.search-router
+    container_name: omk-search-router
+    restart: unless-stopped
+    env_file:
+      - ./search-router.env.example
+    environment:
+      SEARCH_ROUTER_ADDR: ":8090"
+      SEARXNG_URL: "http://searxng:8080"
+      SEARCH_ROUTER_ENABLED: "false"
+      JINA_ENABLED: "true"
+      FLARESOLVERR_URL: "http://flaresolverr:8191"
+      FLARESOLVERR_ENABLED: "true"
+      CRAWL4AI_URL: "http://crawl4ai:11235"
+      CRAWL4AI_ENABLED: "true"
+      YACY_URL: "http://yacy:8090"
+      YACY_ENABLED: "true"
+      YACY_RESOURCE: "global"
+      COMMONCRAWL_ENABLED: "true"
+      COMMONCRAWL_INDEX_ID: "CC-MAIN-2025-51"
+      REDIS_URL: "redis://redis:6379/1"
+    depends_on:
+      redis:
+        condition: service_healthy
+      searxng:
+        condition: service_started
+      flaresolverr:
+        condition: service_started
+      crawl4ai:
+        condition: service_started
+      yacy:
+        condition: service_started
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: omk-searxng
+    restart: unless-stopped
+    environment:
+      BASE_URL: "http://searxng:8080/"
+      INSTANCE_NAME: "omk-search"
+    volumes:
+      - ../searxng/config/settings.yml:/etc/searxng/settings.yml:ro
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: omk-flaresolverr
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info
+      LOG_HTML: "false"
+      CAPTCHA_SOLVER: none
+
+  crawl4ai:
+    image: docker.io/unclecode/crawl4ai:latest
+    container_name: omk-crawl4ai
+    restart: unless-stopped
+    shm_size: "1g"
+    ports:
+      - "11235:11235"
+
+  yacy:
+    image: docker.io/yacy/yacy_search_server:latest
+    container_name: omk-yacy
+    restart: unless-stopped
+    ports:
+      - "8091:8090"
+
+  redis:
+    image: redis:7-alpine
+    container_name: omk-search-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  edge:
+    image: nginx:1.27-alpine
+    container_name: omk-search-edge
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./nginx-search.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - search-router

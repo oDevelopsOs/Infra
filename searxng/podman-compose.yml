@@ -1,0 +1,52 @@
+# SearXNG aislado del backend. Variables: copia env.searxng.example → .env.searxng
+#   podman compose -p searxng -f podman-compose.yml --env-file .env.searxng up -d
+# Red fija investplatform_search: compartida con hetzner/ (Caddy) para TLS en SEARCH_DOMAIN.
+# Sin clave `name:` (Compose v1 / docker-compose antiguo no la admite). Nombre de proyecto: -p searxng
+version: "3.8"
+
+networks:
+  default:
+    name: investplatform_search
+
+services:
+  searxng-redis:
+    image: docker.io/redis:7-alpine
+    container_name: searxng-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+      - "${SEARXNG_PUBLISH:-8088}:8080"
+    volumes:
+      - ./config/settings.yml:/etc/searxng/settings.yml:ro
+      - ./config/limiter.toml:/etc/searxng/limiter.toml:ro
+    environment:
+      SEARXNG_BASE_URL: ${SEARXNG_BASE_URL:-http://127.0.0.1:8088/}
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-change_me_searxng_secret}
+      SEARXNG_LIMITER: ${SEARXNG_LIMITER:-true}
+      SEARXNG_VALKEY_URL: ${SEARXNG_VALKEY_URL:-redis://searxng-redis:6379/0}
+    depends_on:
+      searxng-redis:
+        condition: service_healthy
+
+  searxng-edge:
+    image: docker.io/nginx:1.27-alpine
+    container_name: searxng-edge
+    restart: unless-stopped
+    ports:
+      - "${SEARXNG_EDGE_PUBLISH:-8099}:80"
+    volumes:
+      - ./config/nginx-edge.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      searxng:
+        condition: service_started

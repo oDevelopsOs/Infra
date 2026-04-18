@@ -24,8 +24,8 @@ No mezcles secretos del motor en el `.env` de la aplicación.
 
 ## Orden recomendado en servidor
 
-1. Crear red si hace falta: `podman network create investplatform_search` (o al levantar `searxng/`).
-2. `searxng/` → `podman compose -f podman-compose.yml --env-file .env.searxng up -d`
+1. Crear red si hace falta: `podman network create investplatform_search` (requerida antes de `up`; ver [searxng/README.md](searxng/README.md)).
+2. `searxng/` → `podman compose -p searxng -f podman-compose.yml --env-file .env.searxng up -d`
 3. Clonar/compilar **backend** del monorepo principal y levantar su compose (red `investplatform_internal`).
 4. `hetzner/` → Caddy con `.env.caddy`.
 
@@ -36,9 +36,10 @@ Detalle: [hetzner/README.md](hetzner/README.md).
 ```bash
 git clone https://github.com/oDevelopsOs/Infra.git
 cd Infra/searxng
+podman network inspect investplatform_search >/dev/null 2>&1 || podman network create investplatform_search
 cp env.searxng.example .env.searxng
 # editar .env.searxng
-podman compose -f podman-compose.yml --env-file .env.searxng up -d
+podman compose -p searxng -f podman-compose.yml --env-file .env.searxng up -d
 ```
 
 El backend de la aplicación vive en el repositorio principal del producto; aquí solo hay infraestructura de búsqueda y proxy.

@@ -1,7 +1,7 @@
 # Terminación TLS (Let's Encrypt). Podman: podman compose ...
-# Requisitos: red investplatform_internal (backend) y red investplatform_search (searxng/).
+# Requisitos: redes externas investplatform_internal (backend) y investplatform_search (crear antes: searxng README).
 #
-#   cd searxng && podman compose -f podman-compose.yml --env-file .env.searxng up -d
+#   cd searxng && podman compose -p searxng -f podman-compose.yml --env-file .env.searxng up -d
 #   cd ../../backend && podman compose up -d --build
 #   cd ../hetzner && podman compose -f docker-compose.caddy.yml --env-file .env.caddy up -d
 #
@@ -10,10 +10,8 @@ version: "3.9"
 networks:
   investplatform_internal:
     external: true
-    name: investplatform_internal
   investplatform_search:
     external: true
-    name: investplatform_search
 
 services:
   caddy:

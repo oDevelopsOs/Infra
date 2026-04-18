@@ -1,18 +1,21 @@
 # SearXNG aislado del backend. Variables: copia env.searxng.example → .env.searxng
+# Red: podman network create investplatform_search  (una vez; ver README)
 #   podman compose -p searxng -f podman-compose.yml --env-file .env.searxng up -d
 # Red fija investplatform_search: compartida con hetzner/ (Caddy) para TLS en SEARCH_DOMAIN.
-# Sin clave `name:` (Compose v1 / docker-compose antiguo no la admite). Nombre de proyecto: -p searxng
+# Sin claves `name:` en el YAML (docker-compose v1 las rechaza). Red: crear antes o usar external.
 version: "3.8"
 
 networks:
-  default:
-    name: investplatform_search
+  investplatform_search:
+    external: true
 
 services:
   searxng-redis:
     image: docker.io/redis:7-alpine
     container_name: searxng-redis
     restart: unless-stopped
+    networks:
+      - investplatform_search
     command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -25,6 +28,8 @@ services:
     image: docker.io/searxng/searxng:latest
     container_name: searxng
     restart: unless-stopped
+    networks:
+      - investplatform_search
     ports:
       - "${SEARXNG_PUBLISH:-8088}:8080"
     volumes:
@@ -43,6 +48,8 @@ services:
     image: docker.io/nginx:1.27-alpine
     container_name: searxng-edge
     restart: unless-stopped
+    networks:
+      - investplatform_search
     ports:
       - "${SEARXNG_EDGE_PUBLISH:-8099}:80"
     volumes:

@@ -15,18 +15,26 @@ El **backend** solo necesita en su `.env` la URL para llamar al motor: `SEARXNG_
 
 ## Arranque
 
+La red **`investplatform_search`** debe existir antes (compartida con Caddy). Créala una vez:
+
+```bash
+podman network inspect investplatform_search >/dev/null 2>&1 || podman network create investplatform_search
+```
+
+Luego:
+
 ```bash
 cd searxng
 cp env.searxng.example .env.searxng
 # Edita .env.searxng (SEARXNG_SECRET, SEARXNG_BASE_URL con tu dominio HTTPS en prod)
-podman compose -f podman-compose.yml --env-file .env.searxng up -d
+podman compose -p searxng -f podman-compose.yml --env-file .env.searxng up -d
 ```
 
 Comprueba: `curl -sS "http://127.0.0.1:8088/search?q=test&format=json" | head -c 200`
 
 ## Red `investplatform_search`
 
-Este compose crea la red **`investplatform_search`**. [hetzner](../hetzner/) (Caddy) se une a la misma red para `reverse_proxy searxng-edge:80`.
+El compose **no** define la red (evita la clave `name:` incompatible con `docker-compose` v1). Créala con el comando de la sección Arranque. [hetzner](../hetzner/) (Caddy) usa la misma red para `reverse_proxy searxng-edge:80`.
 
 Orden en servidor (Hetzner): **1)** `searxng/` → **2)** backend (otro repo) → **3)** `hetzner/` (Caddy). Detalle: [../hetzner/README.md](../hetzner/README.md).
 
